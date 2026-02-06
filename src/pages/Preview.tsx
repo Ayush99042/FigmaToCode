@@ -167,7 +167,6 @@ export default function Preview() {
           bg === "light" ? "bg-neutral-100" : "bg-neutral-900"
         } py-20`}
       >
-        {/* AUTO-SIZED PREVIEW FRAME */}
         <div
           ref={frameRef}
           style={{
@@ -187,9 +186,7 @@ export default function Preview() {
               <Component />
             </div>
           ) : (
-            <div className="p-20 text-muted-foreground">
-              Output preview will appear here
-            </div>
+            <div></div>
           )}
         </div>
       </div>
