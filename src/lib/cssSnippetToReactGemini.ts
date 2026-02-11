@@ -23,48 +23,30 @@ export async function convertCssSnippetToReact(
   }
 
   const prompt = `
-You are a frontend code generator.
+You are a Senior Frontend Architect. Convert this flat Figma CSS into a highly organized, semantically nested React component using Tailwind CSS.
 
-INPUTS:
-- CSS extracted from Figma (PRIMARY SOURCE OF TRUTH)
-- Optional PNG image of the same element (REFERENCE ONLY)
+### ARCHITECTURAL MISSION:
+Reconstruct the original Figma hierarchy. Group related elements into logical sections (e.g., Header Section, Grid Section, Dividers) and label them with JSX comments.
 
-CRITICAL PRIORITY RULES (DO NOT VIOLATE):
-1. The provided CSS is the SOURCE OF TRUTH.
-2. Generate JSX that matches the CSS EXACTLY.
-3. Preserve ALL layout values from CSS:
-   - position (absolute / relative)
-   - width / height
-   - left / top
-   - padding / gap
-4. DO NOT normalize, refactor, simplify, or improve the layout.
-5. DO NOT convert absolute layouts into flex/grid.
-6. If the IMAGE conflicts with the CSS, ALWAYS follow the CSS.
-7. The image is ONLY for visual verification, not layout decisions.
+### STRUCTURAL RULES:
+1. **Semantic Nesting**: 
+   - Use spatial reasoning (top/left/width/height) to nest children inside their logical parent containers.
+   - Use 'relative' on section wrappers and 'absolute' for internal positioning only when necessary.
+2. **Auto-Layout Mapping**: 
+   - Convert 'display: flex' to Tailwind 'flex'.
+   - Map 'gap' to 'gap-[Xpx]' and 'flex-direction' to 'flex-col' or 'flex-row'.
+3. **Refined Typography**: 
+   - Use arbitrary values: text-[Xpx], leading-[Xpx], font-[weight].
+   - Use exact hex codes: text-[#FFFFFF].
+4. **Decorative Elements**: 
+   - Handle dividers and background gradients as specific <div> elements with absolute positioning and z-indexing.
+   - Use Tailwind background gradients: bg-[linear-gradient(135deg,#665DCD_0%,#5FA4E6_44.76%,#D2AB67_100%)].
 
-TASK:
-Convert the given CSS into equivalent JSX using Tailwind CSS.
+### CODING STYLE (MANDATORY):
+- **No Comments**: Do NOT include any JSX comments, code labels, or explanations within the code.
+- **Closing Tags**: Every <div> and <p> must be perfectly balanced and closed.
+- **Clean JSX**: Return ONLY the raw JSX code. Do not use markdown blocks (\`\`\`), no explanations, no 'export default'.
 
-ABSOLUTE RULES:
-- JSX ONLY
-- NO export default
-- NO App component
-- NO explanations
-- NO markdown
-- Tailwind CSS ONLY
-- One self-contained JSX snippet
-- Preserve hierarchy implied by the CSS blocks
-
-VALID OUTPUT EXAMPLES:
-- <div className="absolute left-[45px] top-[70px] w-[1045px] h-[228px]">...</div>
-
-INVALID OUTPUT:
-- Full pages
-- Multiple components
-- Layout normalization
-- mx-auto, justify-center, grid unless explicitly in CSS
-
-CSS:
 ${css}
 `;
 
@@ -74,6 +56,11 @@ ${css}
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        generationConfig: {
+          temperature: 0.1,
+          topK: 1,
+          topP: 1,
+        },
         contents: [
           {
             role: "user",
@@ -91,5 +78,9 @@ ${css}
 
   if (!text) throw new Error("No code returned");
 
-  return text.replace(/```(jsx|tsx|js)?|```/g, "").trim();
+  return text
+    .replace(/```(jsx|tsx|js)?|```/g, "")
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+    .replace(/\/\/.*/g, "")
+    .trim();
 }

@@ -1,7 +1,9 @@
-import { Code, Play, Settings } from "lucide-react";
+import { Code, Moon, Play, Settings, Sun } from "lucide-react";
+import { useState } from "react";
 import { cn } from "../../lib/utils";
 
 type View = "converter" | "settings" | "preview" | "snippet";
+type Theme = "light" | "dark";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -42,16 +44,28 @@ export function AppLayout({
   activeView,
   onNavigate,
 }: AppLayoutProps) {
+  const [theme, setTheme] = useState<Theme>("dark");
+
+  const isDark = theme === "dark";
+
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      <aside className="w-16 md:w-64 border-r border-border bg-card flex flex-col">
-        <div className="p-4 flex items-center gap-2 border-b border-border h-16">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center font-bold text-primary-foreground">
-            A
-          </div>
+    <div
+      className={cn(
+        "flex h-screen overflow-hidden transition-colors",
+        isDark ? "bg-black text-white" : "bg-white text-black",
+      )}
+    >
+      <aside
+        className={cn(
+          "w-16 md:w-64 border-r flex flex-col",
+          isDark
+            ? "bg-black border-neutral-800"
+            : "bg-white border-neutral-200",
+        )}
+      >
+        <div className="p-4 flex items-center gap-2 border-b h-16">
           <span className="font-bold text-lg hidden md:block">
-            Anima{" "}
-            <span className="text-muted-foreground font-normal">Preview</span>
+            Figma To Code
           </span>
         </div>
 
@@ -74,7 +88,6 @@ export function AppLayout({
             active={activeView === "preview"}
             onClick={() => onNavigate("preview")}
           />
-
           <NavButton
             icon={<Settings size={20} />}
             label="Settings"
@@ -83,20 +96,31 @@ export function AppLayout({
           />
         </nav>
 
-        <div className="p-4 border-t border-border">
-          <div className="text-xs text-muted-foreground hidden md:block">
-            Local Preview Builder
-            <br />
-            v0.1.0
-          </div>
+        <div className="p-4 border-t text-xs opacity-70 hidden md:block">
+          Local Preview Builder
+          <br />
+          v0.1.0
         </div>
       </aside>
 
       <main className="flex-1 flex flex-col h-full overflow-hidden">
-        <header className="h-16 border-b border-border flex items-center px-6 bg-background/50 backdrop-blur-sm z-10">
-          <h1 className="text-xl font-semibold">
-            {activeView.charAt(0).toUpperCase() + activeView.slice(1)}
-          </h1>
+        <header
+          className={cn(
+            "h-16 border-b flex items-center justify-between px-6",
+            isDark
+              ? "border-neutral-800 bg-black/60"
+              : "border-neutral-200 bg-white/60",
+          )}
+        >
+          <h1 className="text-xl font-semibold capitalize">{activeView}</h1>
+
+          <button
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            className="p-2 rounded-md hover:bg-neutral-800/20 transition"
+            aria-label="Toggle theme"
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
         </header>
 
         <div className="flex-1 overflow-auto p-6">

@@ -52,9 +52,7 @@ export default function SnippetGenerator({
     <div className="space-y-6 pb-12">
       <div>
         <h2 className="text-3xl font-bold">Figma Snippet → React</h2>
-        <p className="text-muted-foreground">
-          Generate React code from a selected Figma portion (CSS + image)
-        </p>
+        <p>Generate React code from a selected Figma portion (CSS + image)</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

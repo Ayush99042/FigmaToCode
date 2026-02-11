@@ -1,10 +1,10 @@
-import { AlertCircle, Play } from "lucide-react";
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-
 import Babel from "@babel/standalone";
+import { AlertCircle, Play } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
-type PreviewBg = "light" | "dark";
+
 function ensureTailwind() {
   if (!document.getElementById("tailwind-preview")) {
     const script = document.createElement("script");
@@ -44,16 +44,11 @@ function findComponentName(code: string) {
 
 export default function Preview() {
   const [code, setCode] = useState("");
-  const [Component, setComponent] = useState<React.FC | null>(null);
+  const [Component, setComponent] = useState<React.FC | null>(null);  
   const [error, setError] = useState<string | null>(null);
-  const [bg, setBg] = useState<PreviewBg>("light");
-  const frameRef = useRef<HTMLDivElement>(null);
+
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const [frameSize, setFrameSize] = useState({
-    width: 0,
-    height: 0,
-  });
   useEffect(() => {
     ensureTailwind();
   }, []);
@@ -96,16 +91,7 @@ export default function Preview() {
       setError(e.message || "Failed to render preview");
     }
   };
-  useLayoutEffect(() => {
-    if (!contentRef.current) return;
 
-    const rect = contentRef.current.getBoundingClientRect();
-
-    setFrameSize({
-      width: rect.width,
-      height: rect.height,
-    });
-  }, [Component, bg]);
   return (
     <div className="space-y-8">
       <div>
@@ -120,13 +106,7 @@ export default function Preview() {
           <textarea
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder={`export default function Tools() {
-  return (
-    <div className="p-6 bg-white rounded-xl">
-      Hello World
-    </div>
-  );
-}`}
+            placeholder="Paste here generated code"
             className="w-full h-[180px] font-mono text-sm border rounded-md p-3"
           />
 
@@ -147,49 +127,12 @@ export default function Preview() {
       </Card>
 
       <div className="border-t border-border" />
-      <div className="flex items-center gap-2">
-        <Button
-          variant={bg === "light" ? "default" : "outline"}
-          onClick={() => setBg("light")}
-        >
-          Light
-        </Button>
 
-        <Button
-          variant={bg === "dark" ? "default" : "outline"}
-          onClick={() => setBg("dark")}
-        >
-          Dark
-        </Button>
-      </div>
-      <div
-        className={`w-full flex justify-center ${
-          bg === "light" ? "bg-neutral-100" : "bg-neutral-900"
-        } py-20`}
-      >
-        <div
-          ref={frameRef}
-          style={{
-            width: frameSize.width || "auto",
-            height: frameSize.height || "auto",
-          }}
-          className={`
-      relative
-      rounded-xl
-      shadow-xl
-      transition-all
-      ${bg === "dark" ? "bg-black text-white" : "bg-white text-black"}
-    `}
-        >
-          {Component ? (
-            <div ref={contentRef} className="relative">
-              <Component />
-            </div>
-          ) : (
-            <div></div>
-          )}
+      {Component && (
+        <div ref={contentRef} className="relative">
+          <Component />
         </div>
-      </div>
+      )}
     </div>
   );
 }
