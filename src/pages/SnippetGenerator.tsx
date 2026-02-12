@@ -94,7 +94,11 @@ export default function SnippetGenerator({
             <CodeViewer code={result} />
           ) : (
             <div className="min-h-[400px] border border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
-              <Code size={40} />
+              {loading ? (
+                <div className="h-10 w-10 animate-spin rounded-full border-3 border-gray-300 border-t-black dark:border-gray-600 dark:border-t-white" />
+              ) : (
+                <Code size={40} />
+              )}
             </div>
           )}
         </div>

@@ -56,11 +56,6 @@ ${css}
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        generationConfig: {
-          temperature: 0.1,
-          topK: 1,
-          topP: 1,
-        },
         contents: [
           {
             role: "user",
@@ -74,9 +69,24 @@ ${css}
   );
 
   const json = await res.json();
+
+  console.log("Gemini Response:", json);
+
+  if (!res.ok) {
+    throw new Error(json?.error?.message || "Gemini API request failed");
+  }
+
+  if (json?.error) {
+    throw new Error(json.error.message);
+  }
+
   const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-  if (!text) throw new Error("No code returned");
+  if (!text) {
+    throw new Error(
+      "Model returned no code. Possibly rate limit or quota exceeded.",
+    );
+  }
 
   return text
     .replace(/```(jsx|tsx|js)?|```/g, "")
