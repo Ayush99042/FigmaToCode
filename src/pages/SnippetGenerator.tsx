@@ -62,7 +62,7 @@ export default function SnippetGenerator({
               <textarea
                 value={css}
                 onChange={(e) => setCss(e.target.value)}
-                placeholder="Paste CSS copied from Figma (Copy as CSS)"
+                placeholder="Paste CSS copied from Figma "
                 className="w-full h-48 font-mono text-sm border rounded-md p-3"
               />
 

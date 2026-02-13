@@ -95,12 +95,6 @@ export function AppLayout({
             onClick={() => onNavigate("settings")}
           />
         </nav>
-
-        <div className="p-4 border-t text-xs opacity-70 hidden md:block">
-          Local Preview Builder
-          <br />
-          v0.1.0
-        </div>
       </aside>
 
       <main className="flex-1 flex flex-col h-full overflow-hidden">
