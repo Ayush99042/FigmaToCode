@@ -36,28 +36,35 @@ export default function SnippetGenerator({
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      <div>
-        <h2 className="text-3xl font-bold">Figma Snippet → React</h2>
-        <p>Generate React code from a selected Figma portion (CSS + image)</p>
+    // Fill the entire available content area; no extra padding or scroll
+    <div className="flex flex-col h-full gap-3">
+
+      {/* ── Page title (compact) ── */}
+      <div className="shrink-0">
+        <h2 className="text-xl font-bold leading-tight">Figma Snippet → React</h2>
+        <p className="text-xs text-muted-foreground">
+          Generate React code from a selected Figma portion (CSS + image)
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[70vh]">
-        {/* ── Left panel: inputs ── */}
-        <div className="flex flex-col gap-4 pr-2">
-          <Card>
-            <CardContent className="pt-6">
+      {/* ── Main two-column work area — takes all remaining space ── */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
+
+        {/* Left panel: inputs */}
+        <div className="flex flex-col gap-3 min-h-0 overflow-y-auto pr-1">
+          <Card className="shrink-0">
+            <CardContent className="pt-4 pb-3">
               <textarea
                 value={css}
                 onChange={(e) => setCss(e.target.value)}
                 placeholder="Paste CSS copied from Figma"
-                className="w-full h-48 font-mono text-sm border rounded-md p-3"
+                className="w-full h-36 font-mono text-xs border rounded-md p-2 resize-none"
               />
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="shrink-0">
+            <CardContent className="pt-4 pb-3">
               <ImageUpload
                 selectedImage={image}
                 onImageSelect={(file) => setImage(file)}
@@ -65,43 +72,43 @@ export default function SnippetGenerator({
             </CardContent>
           </Card>
 
-          {error && <div className="text-sm text-red-500">{error}</div>}
+          {error && <div className="text-xs text-red-500 shrink-0">{error}</div>}
         </div>
 
-        {/* ── Right panel: Code + Preview tabs ── */}
-        <div className="flex flex-col h-full overflow-hidden rounded-lg border">
+        {/* Right panel: Code + Preview tabs */}
+        <div className="flex flex-col min-h-0 overflow-hidden rounded-lg border">
           {/* Tab bar — only shown when there's a result */}
           {result && (
-            <div className="flex items-center gap-0 border-b bg-muted/40 shrink-0">
+            <div className="flex items-center border-b bg-muted/40 shrink-0">
               <button
                 onClick={() => setActiveTab("code")}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors
+                className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors
                   ${
                     activeTab === "code"
                       ? "border-foreground text-foreground"
                       : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
               >
-                <FileCode size={14} />
+                <FileCode size={13} />
                 Code
               </button>
               <button
                 onClick={() => setActiveTab("preview")}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors
+                className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors
                   ${
                     activeTab === "preview"
                       ? "border-foreground text-foreground"
                       : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
               >
-                <Eye size={14} />
+                <Eye size={13} />
                 Preview
               </button>
             </div>
           )}
 
           {/* Tab content */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden min-h-0">
             {result ? (
               activeTab === "code" ? (
                 <div className="h-full overflow-auto">
@@ -114,21 +121,21 @@ export default function SnippetGenerator({
               )
             ) : (
               <div className="h-full border border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
-                <Code size={40} />
+                <Code size={36} />
               </div>
             )}
           </div>
         </div>
+      </div>
 
-        {/* ── Bottom: unified input bar ── */}
-        <div className="col-span-1 lg:col-span-2">
-          <ChatAssistant
-            css={css}
-            image={image}
-            setResult={(code) => setResult(code)}
-            onClear={handleClear}
-          />
-        </div>
+      {/* ── Bottom: unified input bar (always visible, never scrolls away) ── */}
+      <div className="shrink-0">
+        <ChatAssistant
+          css={css}
+          image={image}
+          setResult={(code) => setResult(code)}
+          onClear={handleClear}
+        />
       </div>
     </div>
   );
