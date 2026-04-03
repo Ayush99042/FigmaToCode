@@ -1,6 +1,7 @@
 export async function convertCssSnippetToReact(
   css: string,
   image?: File | null,
+  instruction?: string,
 ) {
   const apiKey = localStorage.getItem("gemini_api_key")?.trim();
   if (!apiKey) throw new Error("Gemini API key not found");
@@ -21,32 +22,42 @@ export async function convertCssSnippetToReact(
       },
     };
   }
+  const dynamicInstruction = instruction
+    ? `### USER INSTRUCTION:
+${instruction}
+
+Apply this instruction strictly.
+`
+    : "";
 
   const prompt = `
-You are a Senior Frontend Architect. Convert this flat Figma CSS into a highly organized, semantically nested React component using Tailwind CSS.
+You are a Senior Frontend Architect.
 
-### ARCHITECTURAL MISSION:
-Reconstruct the original Figma hierarchy. Group related elements into logical sections (e.g., Header Section, Grid Section, Dividers) and label them with JSX comments.
+${dynamicInstruction}
 
-### STRUCTURAL RULES:
-1. **Semantic Nesting**: 
-   - Use spatial reasoning (top/left/width/height) to nest children inside their logical parent containers.
-   - Use 'relative' on section wrappers and 'absolute' for internal positioning only when necessary.
-2. **Auto-Layout Mapping**: 
-   - Convert 'display: flex' to Tailwind 'flex'.
-   - Map 'gap' to 'gap-[Xpx]' and 'flex-direction' to 'flex-col' or 'flex-row'.
-3. **Refined Typography**: 
-   - Use arbitrary values: text-[Xpx], leading-[Xpx], font-[weight].
-   - Use exact hex codes: text-[#FFFFFF].
-4. **Decorative Elements**: 
-   - Handle dividers and background gradients as specific <div> elements with absolute positioning and z-indexing.
-   - Use Tailwind background gradients: bg-[linear-gradient(135deg,#665DCD_0%,#5FA4E6_44.76%,#D2AB67_100%)].
+### TASK:
+Convert the provided Figma CSS (and optional image) into a clean, self-contained React + Tailwind component.
 
-### CODING STYLE (MANDATORY):
-- **No Comments**: Do NOT include any JSX comments, code labels, or explanations within the code.
-- **Closing Tags**: Every <div> and <p> must be perfectly balanced and closed.
-- **Clean JSX**: Return ONLY the raw JSX code. Do not use markdown blocks (\`\`\`), no explanations, no 'export default'.
+### OUTPUT FORMAT (MANDATORY):
+- Output ONLY raw JSX — no markdown fences, no explanations.
+- Start with: function GeneratedComponent() {
+- End with:   }
+- Do NOT include any import statements.
+- Do NOT include "export default".
+- Do NOT include any comments.
 
+### STYLING RULES:
+- Use only Tailwind CSS utility classes.
+- Use arbitrary values for exact sizes: w-[290px], text-[36px], etc.
+- Maintain the exact layout, spacing, and typography from the Figma CSS.
+
+### SMART BEHAVIOR:
+- If instruction includes "responsive" → add responsive breakpoint classes
+- If "dark mode" → use dark: variants
+- If "optimize" → simplify and reduce nesting
+- If "grid" → prefer CSS grid over flex where appropriate
+
+### CSS:
 ${css}
 `;
 
@@ -89,8 +100,14 @@ ${css}
   }
 
   return text
-    .replace(/```(jsx|tsx|js)?|```/g, "")
+    // Strip markdown code fences
+    .replace(/```[\w]*\n?/g, "")
+    // Strip import lines
+    .replace(/^import\s+.*?from\s+['"][^'"]+['"]\s*;?\s*$/gm, "")
+    // Strip export statements
+    .replace(/^export\s+default\s+/gm, "")
+    .replace(/^export\s+/gm, "")
+    // Strip JSX block comments
     .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
-    .replace(/\/\/.*/g, "")
     .trim();
 }
