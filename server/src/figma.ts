@@ -1,5 +1,4 @@
 import express from "express";
-import fetch from "node-fetch";
 
 const router = express.Router();
 const figmaCache = new Map<string, any>();
@@ -60,23 +59,43 @@ function getCleanFigmaData(node: any): any {
   };
 }
 
+function findFirstFrame(node: any): any {
+  if (!node) return null;
+  if (node.type === "FRAME" || node.type === "SECTION" || node.type === "COMPONENT") return node;
+  if (node.children) {
+    for (const child of node.children) {
+      const found = findFirstFrame(child);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 router.get("/file/:fileKey", async (req, res) => {
   try {
     let { fileKey } = req.params;
+    let nodeId: string | null = null;
 
+    // Support full URLs and extract fileKey and nodeId
     if (fileKey.includes("figma.com")) {
-      const match = fileKey.match(/(?:file|design)\/([^/?]+)/);
+      const url = new URL(decodeURIComponent(fileKey));
+      const match = url.pathname.match(/(?:file|design)\/([^/]+)/);
       if (match) fileKey = match[1];
+      nodeId = url.searchParams.get("node-id");
     }
 
-    if (figmaCache.has(fileKey)) {
-      return res.json(figmaCache.get(fileKey));
+    const cacheKey = `${fileKey}${nodeId ? `-${nodeId}` : ""}`;
+    if (figmaCache.has(cacheKey)) {
+      return res.json(figmaCache.get(cacheKey));
     }
 
-    const figmaRes = await fetch(`https://api.figma.com/v1/files/${fileKey}`, {
-      headers: {
-        "X-Figma-Token": process.env.FIGMA_TOKEN!,
-      },
+    // 1. Fetch file/node data
+    const url = nodeId
+      ? `https://api.figma.com/v1/files/${fileKey}/nodes?ids=${nodeId}`
+      : `https://api.figma.com/v1/files/${fileKey}`;
+
+    const figmaRes = await fetch(url, {
+      headers: { "X-Figma-Token": process.env.FIGMA_TOKEN! },
     });
 
     if (!figmaRes.ok) {
@@ -85,11 +104,25 @@ router.get("/file/:fileKey", async (req, res) => {
     }
 
     const rawData: any = await figmaRes.json();
-    const firstPage = rawData.document.children[0];
-    const firstFrame = firstPage.children[0];
+    let targetNode: any = null;
 
+    if (nodeId) {
+      // If we requested a specific node, get it
+      const nodes = rawData.nodes || {};
+      const nodeData = nodes[nodeId] || Object.values(nodes)[0];
+      targetNode = nodeData?.document;
+    } else {
+      // Otherwise find the first frame in the whole document
+      targetNode = findFirstFrame(rawData.document);
+    }
+
+    if (!targetNode) {
+      return res.status(404).json({ error: "No valid Frame found in this file/node." });
+    }
+
+    // 2. Fetch image for the frame
     const imageRes = await fetch(
-      `https://api.figma.com/v1/images/${fileKey}?ids=${firstFrame.id}&format=png`,
+      `https://api.figma.com/v1/images/${fileKey}?ids=${targetNode.id}&format=png`,
       {
         headers: { "X-Figma-Token": process.env.FIGMA_TOKEN! },
       }
@@ -98,7 +131,7 @@ router.get("/file/:fileKey", async (req, res) => {
     let figmaImageBase64 = null;
     if (imageRes.ok) {
       const imageData: any = await imageRes.json();
-      const imageUrl = imageData.images[firstFrame.id];
+      const imageUrl = imageData.images[targetNode.id];
       if (imageUrl) {
         const imgBufferRes = await fetch(imageUrl);
         if (imgBufferRes.ok) {
@@ -108,15 +141,15 @@ router.get("/file/:fileKey", async (req, res) => {
       }
     }
 
-    const figmaJson = getCleanFigmaData(firstFrame);
+    const figmaJson = getCleanFigmaData(targetNode);
     const payload = { figmaJson, figmaImageBase64 };
 
-    figmaCache.set(fileKey, payload);
+    figmaCache.set(cacheKey, payload);
     return res.json(payload);
   } catch (err: any) {
     console.error("Figma Fetch Error:", err.message);
     return res.status(500).json({
-      error: "Failed to fetch Figma file",
+      error: "Failed to fetch Figma file. Check terminal for details.",
     });
   }
 });
