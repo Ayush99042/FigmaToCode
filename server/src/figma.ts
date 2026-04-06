@@ -76,7 +76,6 @@ router.get("/file/:fileKey", async (req, res) => {
     let { fileKey } = req.params;
     let nodeId: string | null = null;
 
-    // Support full URLs and extract fileKey and nodeId
     if (fileKey.includes("figma.com")) {
       const url = new URL(decodeURIComponent(fileKey));
       const match = url.pathname.match(/(?:file|design)\/([^/]+)/);
@@ -89,7 +88,6 @@ router.get("/file/:fileKey", async (req, res) => {
       return res.json(figmaCache.get(cacheKey));
     }
 
-    // 1. Fetch file/node data
     const url = nodeId
       ? `https://api.figma.com/v1/files/${fileKey}/nodes?ids=${nodeId}`
       : `https://api.figma.com/v1/files/${fileKey}`;
@@ -107,12 +105,10 @@ router.get("/file/:fileKey", async (req, res) => {
     let targetNode: any = null;
 
     if (nodeId) {
-      // If we requested a specific node, get it
       const nodes = rawData.nodes || {};
       const nodeData = nodes[nodeId] || Object.values(nodes)[0];
       targetNode = nodeData?.document;
     } else {
-      // Otherwise find the first frame in the whole document
       targetNode = findFirstFrame(rawData.document);
     }
 
@@ -120,7 +116,6 @@ router.get("/file/:fileKey", async (req, res) => {
       return res.status(404).json({ error: "No valid Frame found in this file/node." });
     }
 
-    // 2. Fetch image for the frame
     const imageRes = await fetch(
       `https://api.figma.com/v1/images/${fileKey}?ids=${targetNode.id}&format=png`,
       {
