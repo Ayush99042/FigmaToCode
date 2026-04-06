@@ -1,11 +1,11 @@
-import { AlertCircle, Code } from "lucide-react";
+import { AlertCircle, Code, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 import { CodeViewer } from "../components/ui/CodeViewer";
 import { ImageUpload } from "../components/ui/ImageUpload";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
-import { convertFigmaJsonToReact } from "../lib/figmaJsonToReactGemini";
+import { runSnippetMcp } from "../lib/snippetMcpClient";
 
 interface ConverterProps {
   image: File | null;
@@ -28,6 +28,7 @@ export default function Converter({
 
   const [figmaKey, setFigmaKey] = useState("");
   const [figmaJson, setFigmaJson] = useState<any | null>(null);
+  const [figmaImageBase64, setFigmaImageBase64] = useState<string | null>(null);
 
   const handleImageConvert = async () => {
     if (!image) return;
@@ -159,48 +160,50 @@ Now convert the image exactly as shown.
     }
   };
 
-  const handleFetchFigma = async () => {
+  const handleGenerateFigmaCode = async () => {
     if (!figmaKey) {
       setError("Please enter a Figma file key.");
       return;
     }
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch(
-        `http://localhost:4000/api/figma/file/${figmaKey}`,
-      );
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to fetch Figma file");
-      }
-
-      setFigmaJson(data.figmaJson);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch Figma");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleConvertFigma = async () => {
-    if (!figmaJson) {
-      setError("Fetch Figma file first");
+    const apiKey = localStorage.getItem("gemini_api_key")?.trim();
+    if (!apiKey) {
+      setError("Please set your Gemini API key first.");
       return;
     }
 
+    let currentJson = figmaJson;
+    let currentImage = figmaImageBase64;
+
     setLoading(true);
     setError(null);
+    setResult("");
 
     try {
-      const code = await convertFigmaJsonToReact(figmaJson);
+      if (!currentJson) {
+        const encodedKey = encodeURIComponent(figmaKey);
+        const res = await fetch(`http://localhost:4000/api/figma/file/${encodedKey}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to fetch Figma file");
+        }
+
+        currentJson = data.figmaJson;
+        currentImage = data.figmaImageBase64;
+        setFigmaJson(data.figmaJson);
+        setFigmaImageBase64(data.figmaImageBase64);
+      }
+
+      const code = await runSnippetMcp({
+        figmaJson: currentJson,
+        figmaImageBase64: currentImage,
+        geminiApiKey: apiKey,
+      });
+
       setResult(code);
     } catch (err: any) {
-      setError(err.message || "Gemini conversion failed");
+      setError(err.message || "Conversion failed");
     } finally {
       setLoading(false);
     }
@@ -246,8 +249,14 @@ Now convert the image exactly as shown.
               ) : (
                 <input
                   value={figmaKey}
-                  onChange={(e) => setFigmaKey(e.target.value)}
-                  placeholder="Paste Figma File Key"
+                  onChange={(e) => {
+                    setFigmaKey(e.target.value);
+                    if (figmaJson) {
+                      setFigmaJson(null);
+                      setFigmaImageBase64(null);
+                    }
+                  }}
+                  placeholder="Paste Figma File URL"
                   className="w-full border rounded-md px-3 py-2"
                 />
               )}
@@ -259,22 +268,12 @@ Now convert the image exactly as shown.
               Convert Image
             </Button>
           ) : (
-            <>
-              <Button
-                onClick={handleFetchFigma}
-                disabled={loading || !figmaKey}
-              >
-                Refresh Figma File
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={handleConvertFigma}
-                disabled={!figmaJson || loading}
-              >
-                Convert to React
-              </Button>
-            </>
+            <Button
+              onClick={handleGenerateFigmaCode}
+              disabled={loading || !figmaKey}
+            >
+              {loading && !figmaJson ? "Fetching Figma..." : loading ? "Generating..." : "Generate Code"}
+            </Button>
           )}
 
           <Button
@@ -282,6 +281,7 @@ Now convert the image exactly as shown.
             onClick={() => {
               setImage(null);
               setFigmaJson(null);
+              setFigmaImageBase64(null);
               setResult(null);
               setError(null);
             }}
@@ -301,8 +301,18 @@ Now convert the image exactly as shown.
           {result ? (
             <CodeViewer code={result} />
           ) : (
-            <div className="min-h-[400px] border border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
-              <Code size={40} />
+            <div className="min-h-[400px] h-[700px] border border-dashed rounded-lg flex items-center justify-center text-muted-foreground flex-col gap-4">
+              {loading ? (
+                <>
+                  <Loader2 size={40} className="animate-spin text-primary" />
+                  <span className="text-sm">Generating React Code...</span>
+                </>
+              ) : (
+                <>
+                  <Code size={40} />
+                  <span className="text-sm">No code generated yet</span>
+                </>
+              )}
             </div>
           )}
         </div>

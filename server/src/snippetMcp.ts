@@ -17,19 +17,29 @@ const TOOLS = [
   },
 ];
 
-function sendEvent(res: Response, type: string, data: Record<string, any>) {
-  res.write(`data: ${JSON.stringify({ type, ...data })}\n\n`);
-  if (typeof (res as any).flush === "function") (res as any).flush();
-}
+async function callGemini(
+  prompt: string,
+  geminiKey: string,
+  imageBase64?: string | null,
+): Promise<string> {
+  const parts: any[] = [{ text: prompt }];
 
-async function callGemini(prompt: string, geminiKey: string): Promise<string> {
+  if (imageBase64) {
+    parts.push({
+      inlineData: {
+        mimeType: "image/png",
+        data: imageBase64,
+      },
+    });
+  }
+
   const resp = await fetch(
     `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts }],
       }),
     },
   );
@@ -48,10 +58,7 @@ async function callGemini(prompt: string, geminiKey: string): Promise<string> {
     .trim();
 }
 
-async function analyzeCSS(css: string, res: Response) {
-  sendEvent(res, "status", {
-    message: "🔍 Analyzing CSS...",
-  });
+async function analyzeCSS(css: string) {
 
   const lines: string[] = [];
 
@@ -70,11 +77,7 @@ async function generateComponent(
   analysis: string,
   instruction: string,
   geminiKey: string,
-  res: Response,
 ) {
-  sendEvent(res, "status", {
-    message: "⚙️ Generating component...",
-  });
 
   const prompt = `
 You are a senior frontend developer.
@@ -102,11 +105,7 @@ async function refineComponent(
   code: string,
   instruction: string,
   geminiKey: string,
-  res: Response,
 ) {
-  sendEvent(res, "status", {
-    message: `✨ Refining: ${instruction}`,
-  });
 
   const prompt = `
 Modify this React component:
@@ -125,67 +124,112 @@ Rules:
   return callGemini(prompt, geminiKey);
 }
 
-router.post("/run", async (req: Request, res: Response) => {
-  const { css, instruction, existingCode, geminiApiKey } = req.body;
+async function generateFigmaComponent(
+  figmaJson: any,
+  figmaImageBase64: string | null,
+  instruction: string,
+  geminiKey: string,
+) {
 
-  if (!css && !existingCode) {
-    return res.status(400).json({ error: "css or existingCode required" });
+  const prompt = `
+You are a senior frontend engineer converting Figma designs to clean React code.
+
+${instruction ? `Instruction: ${instruction}` : ""}
+
+GOAL:
+Generate clean, semantic, production-quality React + Tailwind code that visually matches the design.
+
+ABSOLUTE RULES:
+- JSX ONLY
+- export default function
+- Tailwind CSS only
+- NO inline styles
+- NO comments
+- NO markdown
+- NO invalid HTML
+
+CRITICAL VISUAL TRUTH (MOST IMPORTANT):
+- The screenshot is the source of truth for LAYOUT
+- Use the JSON for accurate COLORS, SIZES, and PADDING
+- DO NOT invent layout or ignore elements present in the screenshot
+- Visual grouping must be preserved exactly
+- If elements visually align in rows → use flex-row or grid
+- If elements stack → use flex-col
+- Do NOT guess columns or rows, follow the visual image exactly!
+
+RESPONSIVENESS & STRUCTURE RULES:
+- Desktop layout must visually match the screenshot exactly.
+- Flatten unnecessary Figma wrappers. DO NOT mirror Figma’s internal node tree blindly.
+- Use semantic HTML: section, header, main, div, button.
+
+IMAGE GUIDELINES:
+- If you see a photo or illustration in the screenshot, generate an <img /> tag!
+- YES, use random placeholder images from https://picsum.photos/{width}/{height}?random=1 (extract width/height from JSON)
+- VERY IMPORTANT: Images must NOT overflow! Always wrap images in a container with 'overflow-hidden' if they are bounded.
+- Apply 'w-full h-full object-cover' to images so they scale properly inside their containers.
+- DO NOT leave image containers empty. If there is an image in the design, there must be an img tag in the code.
+
+STYLE RULES:
+- Convert json colors to Tailwind utilities (bg-[#...], text-[#...])
+- Convert json radius to rounded-*
+- Text should reflow naturally but headers should match sizes.
+
+Figma JSON:
+${JSON.stringify(figmaJson, null, 2)}
+`;
+
+  return callGemini(prompt, geminiKey, figmaImageBase64);
+}
+
+router.post("/run", async (req: Request, res: Response) => {
+  const { css, figmaJson, figmaImageBase64, instruction, existingCode, geminiApiKey } = req.body;
+
+  if (!css && !existingCode && !figmaJson) {
+    return res.status(400).json({ error: "css, figmaJson, or existingCode required" });
   }
 
   if (!geminiApiKey) {
     return res.status(400).json({ error: "geminiApiKey required" });
   }
 
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.flushHeaders();
-
   try {
-    sendEvent(res, "status", {
-      message: "⚡ MCP (Gemini mode)",
-    });
-
     let finalCode = "";
 
     if (existingCode) {
-      finalCode = await refineComponent(
-        existingCode,
+      finalCode = await refineComponent(existingCode, instruction, geminiApiKey);
+    } else if (figmaJson) {
+      finalCode = await generateFigmaComponent(
+        figmaJson,
+        figmaImageBase64,
         instruction,
-        geminiApiKey,
-        res,
+        geminiApiKey
       );
+      if (instruction) {
+         finalCode = await refineComponent(finalCode, instruction, geminiApiKey);
+      }
     } else {
-      const analysis = await analyzeCSS(css, res);
+      const analysis = await analyzeCSS(css);
 
       finalCode = await generateComponent(
         css,
         analysis,
         instruction,
-        geminiApiKey,
-        res,
+        geminiApiKey
       );
 
       if (instruction) {
         finalCode = await refineComponent(
           finalCode,
           instruction,
-          geminiApiKey,
-          res,
+          geminiApiKey
         );
       }
     }
 
-    sendEvent(res, "done", { code: finalCode });
+    return res.json({ code: finalCode });
   } catch (err: any) {
     console.error("[MCP ERROR]", err.message);
-
-    sendEvent(res, "error", {
-      message: err.message || "MCP failed",
-    });
-  } finally {
-    res.end();
+    return res.status(500).json({ error: err.message || "MCP failed" });
   }
 });
 

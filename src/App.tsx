@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { AppLayout } from "./components/layout/AppLayout";
 import Converter from "./pages/Converter";
-import Preview from "./pages/Preview";
 import Settings from "./pages/Settings";
 import SnippetGenerator from "./pages/SnippetGenerator";
 
-export type View = "converter" | "settings" | "preview" | "snippet";
+export type View = "converter" | "settings" | "snippet";
 
 function App() {
   const [activeView, setActiveView] = useState<View>(() => {
@@ -40,8 +39,6 @@ function App() {
           setResult={setSnippetResult}
         />
       )}
-
-      {activeView === "preview" && <Preview />}
 
       {activeView === "settings" && <Settings />}
     </AppLayout>

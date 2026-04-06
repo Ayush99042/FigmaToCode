@@ -1,8 +1,7 @@
-import { Code, Eye, FileCode } from "lucide-react";
+import { Code } from "lucide-react";
 import { useState } from "react";
 import ChatAssistant from "../components/ChatAssistant";
 import { Card, CardContent } from "../components/ui/card";
-import { CodePreview } from "../components/ui/CodePreview";
 import { CodeViewer } from "../components/ui/CodeViewer";
 import { ImageUpload } from "../components/ui/ImageUpload";
 
@@ -15,8 +14,6 @@ interface SnippetGeneratorProps {
   setResult: (v: string | null) => void;
 }
 
-type Tab = "code" | "preview";
-
 export default function SnippetGenerator({
   css,
   setCss,
@@ -26,7 +23,6 @@ export default function SnippetGenerator({
   setResult,
 }: SnippetGeneratorProps) {
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>("code");
 
   const handleClear = () => {
     setCss("");
@@ -74,46 +70,11 @@ export default function SnippetGenerator({
         </div>
 
         <div className="flex flex-col min-h-0 overflow-hidden rounded-lg border">
-          {result && (
-            <div className="flex items-center border-b bg-muted/40 shrink-0">
-              <button
-                onClick={() => setActiveTab("code")}
-                className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors
-                  ${
-                    activeTab === "code"
-                      ? "border-foreground text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-              >
-                <FileCode size={13} />
-                Code
-              </button>
-              <button
-                onClick={() => setActiveTab("preview")}
-                className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors
-                  ${
-                    activeTab === "preview"
-                      ? "border-foreground text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-              >
-                <Eye size={13} />
-                Preview
-              </button>
-            </div>
-          )}
-
           <div className="flex-1 overflow-hidden min-h-0">
             {result ? (
-              activeTab === "code" ? (
-                <div className="h-full overflow-auto">
-                  <CodeViewer code={result} />
-                </div>
-              ) : (
-                <div className="h-full bg-white">
-                  <CodePreview code={result} />
-                </div>
-              )
+              <div >
+                <CodeViewer code={result} />
+              </div>
             ) : (
               <div className="h-full border border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
                 <Code size={36} />

@@ -65,7 +65,7 @@ router.get("/file/:fileKey", async (req, res) => {
     let { fileKey } = req.params;
 
     if (fileKey.includes("figma.com")) {
-      const match = fileKey.match(/file\/([^/?]+)/);
+      const match = fileKey.match(/(?:file|design)\/([^/?]+)/);
       if (match) fileKey = match[1];
     }
 
@@ -88,8 +88,28 @@ router.get("/file/:fileKey", async (req, res) => {
     const firstPage = rawData.document.children[0];
     const firstFrame = firstPage.children[0];
 
+    const imageRes = await fetch(
+      `https://api.figma.com/v1/images/${fileKey}?ids=${firstFrame.id}&format=png`,
+      {
+        headers: { "X-Figma-Token": process.env.FIGMA_TOKEN! },
+      }
+    );
+
+    let figmaImageBase64 = null;
+    if (imageRes.ok) {
+      const imageData: any = await imageRes.json();
+      const imageUrl = imageData.images[firstFrame.id];
+      if (imageUrl) {
+        const imgBufferRes = await fetch(imageUrl);
+        if (imgBufferRes.ok) {
+          const arrayBuffer = await imgBufferRes.arrayBuffer();
+          figmaImageBase64 = Buffer.from(arrayBuffer).toString("base64");
+        }
+      }
+    }
+
     const figmaJson = getCleanFigmaData(firstFrame);
-    const payload = { figmaJson };
+    const payload = { figmaJson, figmaImageBase64 };
 
     figmaCache.set(fileKey, payload);
     return res.json(payload);

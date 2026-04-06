@@ -1,8 +1,8 @@
-import { Code, Moon, Play, Settings, Sun } from "lucide-react";
+import { Code, Moon, Settings, Sun } from "lucide-react";
 import { useState } from "react";
 import { cn } from "../../lib/utils";
 
-type View = "converter" | "settings" | "preview" | "snippet";
+type View = "converter" | "settings" | "snippet";
 type Theme = "light" | "dark";
 
 interface AppLayoutProps {
@@ -82,12 +82,7 @@ export function AppLayout({
             active={activeView === "snippet"}
             onClick={() => onNavigate("snippet")}
           />
-          <NavButton
-            icon={<Play size={20} />}
-            label="Preview"
-            active={activeView === "preview"}
-            onClick={() => onNavigate("preview")}
-          />
+
           <NavButton
             icon={<Settings size={20} />}
             label="Settings"

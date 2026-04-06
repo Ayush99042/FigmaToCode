@@ -43,7 +43,6 @@ export default function ChatAssistant({
         instruction: instruction || undefined,
         existingCode: isRefine ? result! : undefined,
         geminiApiKey,
-        onStatus: (msg) => setStatusMsg(msg),
       });
 
       setResult(code);
