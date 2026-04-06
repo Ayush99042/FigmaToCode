@@ -1,7 +1,7 @@
+import { Code, Eye, FileCode } from "lucide-react";
 import { useState } from "react";
 import ChatAssistant from "../components/ChatAssistant";
 import { Card, CardContent } from "../components/ui/card";
-import { Code, Eye, FileCode } from "lucide-react";
 import { CodePreview } from "../components/ui/CodePreview";
 import { CodeViewer } from "../components/ui/CodeViewer";
 import { ImageUpload } from "../components/ui/ImageUpload";
@@ -36,21 +36,17 @@ export default function SnippetGenerator({
   };
 
   return (
-    // Fill the entire available content area; no extra padding or scroll
     <div className="flex flex-col h-full gap-3">
-
-      {/* ── Page title (compact) ── */}
       <div className="shrink-0">
-        <h2 className="text-xl font-bold leading-tight">Figma Snippet → React</h2>
+        <h2 className="text-xl font-bold leading-tight">
+          Figma Snippet → React
+        </h2>
         <p className="text-xs text-muted-foreground">
           Generate React code from a selected Figma portion (CSS + image)
         </p>
       </div>
 
-      {/* ── Main two-column work area — takes all remaining space ── */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
-
-        {/* Left panel: inputs */}
         <div className="flex flex-col gap-3 min-h-0 overflow-y-auto pr-1">
           <Card className="shrink-0">
             <CardContent className="pt-4 pb-3">
@@ -72,12 +68,12 @@ export default function SnippetGenerator({
             </CardContent>
           </Card>
 
-          {error && <div className="text-xs text-red-500 shrink-0">{error}</div>}
+          {error && (
+            <div className="text-xs text-red-500 shrink-0">{error}</div>
+          )}
         </div>
 
-        {/* Right panel: Code + Preview tabs */}
         <div className="flex flex-col min-h-0 overflow-hidden rounded-lg border">
-          {/* Tab bar — only shown when there's a result */}
           {result && (
             <div className="flex items-center border-b bg-muted/40 shrink-0">
               <button
@@ -107,7 +103,6 @@ export default function SnippetGenerator({
             </div>
           )}
 
-          {/* Tab content */}
           <div className="flex-1 overflow-hidden min-h-0">
             {result ? (
               activeTab === "code" ? (
@@ -128,11 +123,11 @@ export default function SnippetGenerator({
         </div>
       </div>
 
-      {/* ── Bottom: unified input bar (always visible, never scrolls away) ── */}
       <div className="shrink-0">
         <ChatAssistant
           css={css}
           image={image}
+          result={result}
           setResult={(code) => setResult(code)}
           onClear={handleClear}
         />
